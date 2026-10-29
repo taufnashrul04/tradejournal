@@ -89,7 +89,7 @@ function renderTable(trades) {
     const tgl = new Date(t.tanggal + 'T00:00:00');
     const hariTgl = `${HARI[tgl.getDay()]}, ${tgl.toLocaleDateString('id-ID')}`;
     const pnlClass = t.pnl > 0 ? 'pnl-pos' : t.pnl < 0 ? 'pnl-neg' : '';
-    const hasilClass = t.hasil === 'Win' ? 'badge-win' : t.hasil === 'Loss' ? 'badge-loss' : 'badge-be';
+    const hasilClass = t.hasil === 'Win' ? 'badge-win' : t.hasil === 'Loss' ? 'badge-loss' : t.hasil === 'SL+' ? 'badge-slplus' : 'badge-be';
     const posisiClass = t.posisi === 'Long' ? 'badge-long' : 'badge-short';
     const buktiHtml = t.bukti_url
       ? `<button class="btn-img" onclick="previewImg('${t.bukti_url}')">Lihat</button>`
@@ -182,6 +182,7 @@ function openModal(trade = null) {
     document.getElementById('f-timeframe').value = trade.timeframe || '';
     document.getElementById('f-posisi').value = trade.posisi || '';
     document.getElementById('f-hasil').value = trade.hasil || '';
+    onHasilChange();
     document.getElementById('f-pnl').value = trade.pnl != null ? trade.pnl : '';
     document.getElementById('f-catatan').value = trade.catatan || '';
     if (trade.bukti_url) {
@@ -196,7 +197,10 @@ function openModal(trade = null) {
   document.getElementById('modal').classList.remove('hidden');
 }
 
-function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+function closeModal() {
+  document.getElementById('modal').classList.add('hidden');
+  document.getElementById('f-pnl').style.color = '';
+}
 function closeModalOutside(e) { if (e.target === document.getElementById('modal')) closeModal(); }
 
 function clearBukti() {
@@ -218,7 +222,41 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsDataURL(file);
     }
   });
+
+  // Auto-sign PNL saat PNL diketik
+  document.getElementById('f-pnl').addEventListener('input', () => {
+    enforcePnlSign();
+  });
 });
+
+function onHasilChange() {
+  const hasil = document.getElementById('f-hasil').value;
+  const pnlInput = document.getElementById('f-pnl');
+  const val = parseFloat(pnlInput.value);
+
+  if (hasil === 'Win' || hasil === 'SL+') {
+    if (!isNaN(val)) pnlInput.value = Math.abs(val);
+    pnlInput.style.color = 'var(--win)';
+  } else if (hasil === 'Loss') {
+    if (!isNaN(val) && val !== 0) pnlInput.value = -Math.abs(val);
+    pnlInput.style.color = 'var(--loss)';
+  } else {
+    pnlInput.style.color = '';
+  }
+}
+
+function enforcePnlSign() {
+  const hasil = document.getElementById('f-hasil').value;
+  const pnlInput = document.getElementById('f-pnl');
+  const val = parseFloat(pnlInput.value);
+  if (isNaN(val) || val === 0) return;
+
+  if ((hasil === 'Win' || hasil === 'SL+') && val < 0) {
+    pnlInput.value = Math.abs(val);
+  } else if (hasil === 'Loss' && val > 0) {
+    pnlInput.value = -val;
+  }
+}
 
 async function saveTrade(e) {
   e.preventDefault();
@@ -241,6 +279,9 @@ async function saveTrade(e) {
     const { data: urlData } = sb.storage.from('bukti').getPublicUrl(path);
     buktiUrl = urlData.publicUrl;
   }
+
+  // Enforce tanda sesuai hasil sebelum simpan
+  enforcePnlSign();
 
   const pnlVal = document.getElementById('f-pnl').value;
   const payload = {

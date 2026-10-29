@@ -424,6 +424,7 @@ td {
 .badge-be { background: rgba(251,191,36,0.12); color: var(--be); border: 1px solid rgba(251,191,36,0.2); }
 .badge-long { background: rgba(96,165,250,0.12); color: var(--long); border: 1px solid rgba(96,165,250,0.2); }
 .badge-short { background: rgba(192,132,252,0.12); color: var(--short); border: 1px solid rgba(192,132,252,0.2); }
+.badge-slplus { background: rgba(52,211,153,0.08); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.15); }
 
 /* ===== BUTTONS ===== */
 .btn-primary {

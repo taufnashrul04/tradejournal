@@ -219,11 +219,12 @@
           </div>
           <div class="form-group">
             <label>Hasil</label>
-            <select id="f-hasil">
+            <select id="f-hasil" onchange="onHasilChange()">
               <option value="">Pilih</option>
               <option value="Win">Win</option>
               <option value="Loss">Loss</option>
               <option value="BE">BE (Breakeven)</option>
+              <option value="SL+">SL+ (Stop Loss to Profit)</option>
             </select>
           </div>
           <div class="form-group">
