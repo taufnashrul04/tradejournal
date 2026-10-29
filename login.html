@@ -70,7 +70,7 @@
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     sb.auth.getSession().then(({ data: { session } }) => {
-      if (session) window.location.href = 'index.html';
+      if (session) window.location.href = 'dashboard.html';
     });
 
     function switchTab(tab) {
@@ -108,7 +108,7 @@
       if (error) {
         showAlert(error.message || 'Email atau password salah.');
       } else {
-        window.location.href = 'index.html';
+        window.location.href = 'dashboard.html';
       }
       setLoading('btn-login', false);
     }

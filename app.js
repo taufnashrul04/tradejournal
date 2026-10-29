@@ -4,20 +4,42 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 let editingId = null;
 let currentBuktiUrl = null;
+let journalId = null;
 
 const HARI = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const TYPE_LABELS = { prop:'Prop Firm', forex:'Forex', crypto:'Crypto Perp', saham:'Saham', demo:'Demo', custom:'Lainnya' };
 
-// Auth guard
+// Auth guard + load journal dari URL
 sb.auth.getSession().then(({ data: { session } }) => {
-  if (!session) {
-    window.location.href = 'login.html';
-    return;
-  }
+  if (!session) { window.location.href = 'login.html'; return; }
   currentUser = session.user;
   const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
   document.getElementById('nav-username').textContent = username;
+
+  const params = new URLSearchParams(window.location.search);
+  journalId = params.get('j');
+  if (!journalId) { window.location.href = 'dashboard.html'; return; }
+
+  loadJournalInfo();
   loadTrades();
 });
+
+async function loadJournalInfo() {
+  const { data, error } = await sb.from('journals').select('*').eq('id', journalId).single();
+  if (error || !data) { window.location.href = 'dashboard.html'; return; }
+
+  document.title = `${data.name} - Trading Journal`;
+  document.getElementById('j-title').textContent = data.name;
+  document.getElementById('j-emoji-icon').textContent = data.emoji;
+  document.getElementById('j-emoji-icon').style.background = `${data.color}22`;
+  document.getElementById('j-emoji-icon').style.borderColor = `${data.color}33`;
+
+  const badge = document.getElementById('j-type-badge');
+  badge.textContent = TYPE_LABELS[data.type] || data.type;
+  badge.style.color = data.color;
+  badge.style.borderColor = `${data.color}33`;
+  badge.style.background = `${data.color}11`;
+}
 
 async function logout() {
   await sb.auth.signOut();
@@ -30,7 +52,11 @@ async function loadTrades() {
   const filterHasil = document.getElementById('filter-hasil').value;
   const filterPosisi = document.getElementById('filter-posisi').value;
 
-  let query = sb.from('trades').select('*').eq('user_id', currentUser.id).order('tanggal', { ascending: false }).order('id', { ascending: false });
+  let query = sb.from('trades').select('*')
+    .eq('user_id', currentUser.id)
+    .eq('journal_id', journalId)
+    .order('tanggal', { ascending: false })
+    .order('id', { ascending: false });
 
   if (filterMonth) {
     const [year, month] = filterMonth.split('-');
@@ -52,7 +78,7 @@ async function loadTrades() {
 function renderTable(trades) {
   const tbody = document.getElementById('trade-body');
   if (!trades.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Belum ada data trade</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Belum ada trade di journal ini</td></tr>';
     return;
   }
 
@@ -61,21 +87,21 @@ function renderTable(trades) {
     const hariTgl = `${HARI[tgl.getDay()]}, ${tgl.toLocaleDateString('id-ID')}`;
     const pnlClass = t.pnl > 0 ? 'pnl-pos' : t.pnl < 0 ? 'pnl-neg' : '';
     const hasilClass = t.hasil === 'Win' ? 'badge-win' : t.hasil === 'Loss' ? 'badge-loss' : 'badge-be';
-    const posisiClass = t.posisi === 'Long' ? 'badge-long' : t.posisi === 'Short' ? 'badge-short' : '';
+    const posisiClass = t.posisi === 'Long' ? 'badge-long' : 'badge-short';
     const buktiHtml = t.bukti_url
       ? `<button class="btn-img" onclick="previewImg('${t.bukti_url}')">Lihat</button>`
-      : '-';
+      : '<span style="color:var(--text3)">-</span>';
 
     return `<tr>
-      <td>${i + 1}</td>
+      <td class="no-cell">${i + 1}</td>
       <td>${hariTgl}</td>
-      <td>${t.entry_model || '-'}</td>
+      <td>${t.entry_model || '<span style="color:var(--text3)">-</span>'}</td>
       <td class="pair-cell">${t.pair}</td>
-      <td>${t.session || '-'}</td>
-      <td>${t.timeframe || '-'}</td>
-      <td>${t.posisi ? `<span class="badge ${posisiClass}">${t.posisi}</span>` : '-'}</td>
-      <td>${t.hasil ? `<span class="badge ${hasilClass}">${t.hasil}</span>` : '-'}</td>
-      <td class="${pnlClass}">${t.pnl != null ? (t.pnl > 0 ? '+' : '') + Number(t.pnl).toFixed(2) : '-'}</td>
+      <td>${t.session || '<span style="color:var(--text3)">-</span>'}</td>
+      <td>${t.timeframe || '<span style="color:var(--text3)">-</span>'}</td>
+      <td>${t.posisi ? `<span class="badge ${posisiClass}">${t.posisi}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+      <td>${t.hasil ? `<span class="badge ${hasilClass}">${t.hasil}</span>` : '<span style="color:var(--text3)">-</span>'}</td>
+      <td class="${pnlClass}">${t.pnl != null ? (t.pnl > 0 ? '+' : '') + Number(t.pnl).toFixed(2) : '<span style="color:var(--text3)">-</span>'}</td>
       <td>${buktiHtml}</td>
       <td>
         <button class="btn-edit" onclick="editTrade(${t.id})">Edit</button>
@@ -97,12 +123,12 @@ function renderStats(trades) {
   document.getElementById('stat-pnl').textContent = (totalPnl >= 0 ? '+' : '') + totalPnl.toFixed(2);
   document.getElementById('stat-winrate').textContent = winrate + '%';
 
-  const pnlEl = document.getElementById('stat-pnl').parentElement;
-  pnlEl.classList.toggle('pnl-pos', totalPnl > 0);
-  pnlEl.classList.toggle('pnl-neg', totalPnl < 0);
+  const pnlCard = document.getElementById('stat-pnl').parentElement;
+  pnlCard.classList.toggle('pnl-pos', totalPnl > 0);
+  pnlCard.classList.toggle('pnl-neg', totalPnl < 0);
 }
 
-// Modal
+// Modal trade
 function openModal(trade = null) {
   editingId = null;
   currentBuktiUrl = null;
@@ -114,7 +140,6 @@ function openModal(trade = null) {
     editingId = trade.id;
     currentBuktiUrl = trade.bukti_url;
     document.getElementById('modal-title').textContent = 'Edit Trade';
-    document.getElementById('trade-id').value = trade.id;
     document.getElementById('f-tanggal').value = trade.tanggal;
     document.getElementById('f-entry-model').value = trade.entry_model || '';
     document.getElementById('f-pair').value = trade.pair;
@@ -136,13 +161,8 @@ function openModal(trade = null) {
   document.getElementById('modal').classList.remove('hidden');
 }
 
-function closeModal() {
-  document.getElementById('modal').classList.add('hidden');
-}
-
-function closeModalOutside(e) {
-  if (e.target === document.getElementById('modal')) closeModal();
-}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('modal')) closeModal(); }
 
 function clearBukti() {
   document.getElementById('f-bukti').value = '';
@@ -151,7 +171,6 @@ function clearBukti() {
   currentBuktiUrl = null;
 }
 
-// File preview saat pilih
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-bukti').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -166,32 +185,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Save trade
 async function saveTrade(e) {
   e.preventDefault();
-  const btnSave = document.getElementById('btn-save');
-  btnSave.disabled = true;
-  btnSave.querySelector('.btn-text').classList.add('hidden');
-  btnSave.querySelector('.btn-loading').classList.remove('hidden');
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.querySelector('.btn-text').classList.add('hidden');
+  btn.querySelector('.btn-loading').classList.remove('hidden');
 
   const tanggal = document.getElementById('f-tanggal').value;
-  const tglDate = new Date(tanggal + 'T00:00:00');
-  const hari = HARI[tglDate.getDay()];
+  const hari = HARI[new Date(tanggal + 'T00:00:00').getDay()];
 
   let buktiUrl = currentBuktiUrl;
-
-  // Upload gambar jika ada file baru
   const fileInput = document.getElementById('f-bukti');
   if (fileInput.files[0]) {
     const file = fileInput.files[0];
     const ext = file.name.split('.').pop();
     const path = `${currentUser.id}/${Date.now()}.${ext}`;
-    const { data: uploadData, error: uploadErr } = await sb.storage.from('bukti').upload(path, file);
-    if (uploadErr) {
-      alert('Gagal upload gambar: ' + uploadErr.message);
-      resetSaveBtn();
-      return;
-    }
+    const { error: uploadErr } = await sb.storage.from('bukti').upload(path, file);
+    if (uploadErr) { alert('Gagal upload: ' + uploadErr.message); resetSaveBtn(); return; }
     const { data: urlData } = sb.storage.from('bukti').getPublicUrl(path);
     buktiUrl = urlData.publicUrl;
   }
@@ -199,6 +210,7 @@ async function saveTrade(e) {
   const pnlVal = document.getElementById('f-pnl').value;
   const payload = {
     user_id: currentUser.id,
+    journal_id: Number(journalId),
     tanggal,
     hari,
     entry_model: document.getElementById('f-entry-model').value || null,
@@ -219,12 +231,8 @@ async function saveTrade(e) {
     ({ error } = await sb.from('trades').insert(payload));
   }
 
-  if (error) {
-    alert('Gagal menyimpan: ' + error.message);
-  } else {
-    closeModal();
-    loadTrades();
-  }
+  if (error) { alert('Gagal menyimpan: ' + error.message); }
+  else { closeModal(); loadTrades(); }
   resetSaveBtn();
 }
 
@@ -235,21 +243,17 @@ function resetSaveBtn() {
   btn.querySelector('.btn-loading').classList.add('hidden');
 }
 
-// Edit trade
 async function editTrade(id) {
   const { data, error } = await sb.from('trades').select('*').eq('id', id).single();
-  if (error || !data) return;
-  openModal(data);
+  if (!error && data) openModal(data);
 }
 
-// Delete trade
 async function deleteTrade(id) {
   if (!confirm('Hapus trade ini?')) return;
   const { error } = await sb.from('trades').delete().eq('id', id);
   if (!error) loadTrades();
 }
 
-// Preview gambar
 function previewImg(url) {
   document.getElementById('img-modal-src').src = url;
   document.getElementById('img-modal').classList.remove('hidden');

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Trading Journal</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .dash-header {
+      text-align: center;
+      padding: 56px 0 40px;
+    }
+    .dash-header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .dash-header p { color: var(--text2); font-size: 15px; }
+
+    .journals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .journal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      cursor: pointer;
+      transition: transform 0.3s var(--ease-snap), border-color 0.3s, box-shadow 0.3s var(--ease-snap);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      text-decoration: none;
+    }
+    .journal-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .journal-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-hi);
+    }
+
+    .journal-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .journal-emoji {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+
+    .journal-menu-btn {
+      background: transparent;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      font-size: 18px;
+      line-height: 1;
+      transition: color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .journal-menu-btn:hover { color: var(--text); background: var(--surface-hi); }
+
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: rgba(12,12,20,0.97);
+      border: 1px solid var(--border-hi);
+      border-radius: var(--radius-md);
+      padding: 6px;
+      z-index: 50;
+      min-width: 140px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+      display: none;
+    }
+    .dropdown-menu.open { display: block; animation: modalIn 0.15s var(--ease-out); }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text2);
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-family: inherit;
+      transition: background 0.15s, color 0.15s;
+    }
+    .dropdown-item:hover { background: var(--surface-hi); color: var(--text); }
+    .dropdown-item.danger { color: var(--loss); }
+    .dropdown-item.danger:hover { background: rgba(248,113,113,0.1); }
+
+    .journal-info { flex: 1; }
+    .journal-name {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .journal-desc {
+      font-size: 12px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .journal-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 99px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+
+    .journal-stats {
+      display: flex;
+      gap: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+    .jstat { display: flex; flex-direction: column; gap: 3px; }
+    .jstat-label { font-size: 10px; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+    .jstat-value { font-size: 16px; font-weight: 700; color: var(--text); }
+
+    /* Add card */
+    .journal-add-card {
+      background: transparent;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-xl);
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-snap);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 180px;
+      color: var(--text2);
+      font-family: inherit;
+      width: 100%;
+    }
+    .journal-add-card:hover {
+      border-color: rgba(124,111,247,0.4);
+      background: rgba(124,111,247,0.04);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .journal-add-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: var(--surface-hi);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      transition: background 0.2s;
+    }
+    .journal-add-card:hover .journal-add-icon { background: rgba(124,111,247,0.15); }
+    .journal-add-label { font-size: 13px; font-weight: 600; }
+
+    /* Modal journal */
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .type-option {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 8px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+      background: transparent;
+      font-family: inherit;
+      color: var(--text2);
+    }
+    .type-option:hover { border-color: var(--border-hi); background: var(--surface-hi); color: var(--text); }
+    .type-option.selected { border-color: var(--accent); background: rgba(124,111,247,0.1); color: var(--text); }
+    .type-option-emoji { font-size: 22px; display: block; margin-bottom: 5px; }
+    .type-option-label { font-size: 11px; font-weight: 700; }
+
+    .color-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .color-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 99px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .color-dot:hover { transform: scale(1.15); }
+    .color-dot.selected { border-color: white; transform: scale(1.1); }
+
+    @media (max-width: 640px) {
+      .dash-header { padding: 32px 0 28px; }
+      .dash-header h1 { font-size: 24px; }
+      .journals-grid { grid-template-columns: 1fr; }
+      .type-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <div class="navbar-wrap">
+    <nav class="navbar">
+      <div class="nav-brand">
+        <div class="nav-brand-icon">📈</div>
+        Trading Journal
+      </div>
+      <div class="nav-right">
+        <span id="nav-username" class="nav-username"></span>
+        <button class="btn-logout" onclick="logout()">Keluar</button>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main-container">
+    <div class="dash-header reveal">
+      <h1>Journal Kamu</h1>
+      <p>Pilih journal untuk mulai catat trade, atau buat journal baru</p>
+    </div>
+
+    <div class="journals-grid" id="journals-grid">
+      <!-- Diisi oleh JS -->
+    </div>
+  </div>
+
+  <!-- Modal Buat/Edit Journal -->
+  <div id="journal-modal" class="modal-overlay hidden" onclick="closeJournalModalOutside(event)">
+    <div class="modal-card" style="max-width:500px">
+      <div class="modal-header">
+        <h2 id="journal-modal-title">Buat Journal Baru</h2>
+        <button class="btn-close" onclick="closeJournalModal()">✕</button>
+      </div>
+      <div style="padding:22px 24px;display:flex;flex-direction:column;gap:18px">
+        <div class="form-group">
+          <label>Nama Journal *</label>
+          <input type="text" id="j-name" placeholder="Contoh: FTMO $10k, Crypto Perp..." maxlength="40" required>
+        </div>
+        <div class="form-group">
+          <label>Tipe</label>
+          <div class="type-grid" id="type-grid">
+            <button type="button" class="type-option selected" data-type="prop" data-emoji="🏆" onclick="selectType(this)">
+              <span class="type-option-emoji">🏆</span>
+              <span class="type-option-label">Prop Firm</span>
+            </button>
+            <button type="button" class="type-option" data-type="forex" data-emoji="💱" onclick="selectType(this)">
+              <span class="type-option-emoji">💱</span>
+              <span class="type-option-label">Forex</span>
+            </button>
+            <button type="button" class="type-option" data-type="crypto" data-emoji="₿" onclick="selectType(this)">
+              <span class="type-option-emoji">₿</span>
+              <span class="type-option-label">Crypto Perp</span>
+            </button>
+            <button type="button" class="type-option" data-type="saham" data-emoji="📊" onclick="selectType(this)">
+              <span class="type-option-emoji">📊</span>
+              <span class="type-option-label">Saham</span>
+            </button>
+            <button type="button" class="type-option" data-type="demo" data-emoji="🎮" onclick="selectType(this)">
+              <span class="type-option-emoji">🎮</span>
+              <span class="type-option-label">Demo</span>
+            </button>
+            <button type="button" class="type-option" data-type="custom" data-emoji="📝" onclick="selectType(this)">
+              <span class="type-option-emoji">📝</span>
+              <span class="type-option-label">Lainnya</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Warna</label>
+          <div class="color-row" id="color-row">
+            <div class="color-dot selected" style="background:#7c6ff7" data-color="#7c6ff7" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#f59e0b" data-color="#f59e0b" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#34d399" data-color="#34d399" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#f87171" data-color="#f87171" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#60a5fa" data-color="#60a5fa" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#c084fc" data-color="#c084fc" onclick="selectColor(this)"></div>
+            <div class="color-dot" style="background:#fb923c" data-color="#fb923c" onclick="selectColor(this)"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Deskripsi (opsional)</label>
+          <input type="text" id="j-desc" placeholder="Contoh: Challenge $10k phase 1...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeJournalModal()">Batal</button>
+        <button class="btn-primary" id="btn-save-journal" onclick="saveJournal()">
+          <span class="btn-text">Simpan</span>
+          <span class="btn-loading hidden">Menyimpan...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+  <script>
+    const { createClient } = supabase;
+    const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let journals = [];
+    let editingJournalId = null;
+    let selectedType = 'prop';
+    let selectedEmoji = '🏆';
+    let selectedColor = '#7c6ff7';
+
+    const TYPE_LABELS = { prop:'Prop Firm', forex:'Forex', crypto:'Crypto Perp', saham:'Saham', demo:'Demo', custom:'Lainnya' };
+
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { window.location.href = 'login.html'; return; }
+      currentUser = session.user;
+      const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
+      document.getElementById('nav-username').textContent = username;
+      loadJournals();
+    });
+
+    async function logout() {
+      await sb.auth.signOut();
+      window.location.href = 'login.html';
+    }
+
+    async function loadJournals() {
+      const { data, error } = await sb.from('journals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true });
+      if (error) { console.error(error); return; }
+      journals = data || [];
+
+      // Load stats per journal
+      const stats = await loadJournalStats(journals.map(j => j.id));
+      renderJournals(stats);
+    }
+
+    async function loadJournalStats(ids) {
+      if (!ids.length) return {};
+      const { data } = await sb.from('trades')
+        .select('journal_id, hasil, pnl')
+        .in('journal_id', ids)
+        .eq('user_id', currentUser.id);
+      const stats = {};
+      ids.forEach(id => stats[id] = { total: 0, win: 0, pnl: 0 });
+      (data || []).forEach(t => {
+        if (!stats[t.journal_id]) return;
+        stats[t.journal_id].total++;
+        if (t.hasil === 'Win') stats[t.journal_id].win++;
+        stats[t.journal_id].pnl += Number(t.pnl) || 0;
+      });
+      return stats;
+    }
+
+    function renderJournals(stats) {
+      const grid = document.getElementById('journals-grid');
+      const cards = journals.map(j => {
+        const s = stats[j.id] || { total: 0, win: 0, pnl: 0 };
+        const wr = s.total ? Math.round((s.win / s.total) * 100) : 0;
+        const pnlStr = s.pnl > 0 ? `+${s.pnl.toFixed(0)}` : s.pnl.toFixed(0);
+        const pnlColor = s.pnl > 0 ? 'var(--win)' : s.pnl < 0 ? 'var(--loss)' : 'var(--text2)';
+        const typeLabel = TYPE_LABELS[j.type] || j.type;
+
+        return `<div class="journal-card reveal" onclick="openJournal(${j.id}, event)" style="--j-color:${j.color}">
+          <div class="journal-card-top">
+            <div class="journal-emoji" style="background:${j.color}22;border:1px solid ${j.color}33">${j.emoji}</div>
+            <div style="position:relative">
+              <button class="journal-menu-btn" onclick="toggleMenu(event,${j.id})" title="Opsi">⋯</button>
+              <div class="dropdown-menu" id="menu-${j.id}">
+                <button class="dropdown-item" onclick="editJournal(${j.id},event)">✏️ Edit</button>
+                <button class="dropdown-item danger" onclick="deleteJournal(${j.id},event)">🗑️ Hapus</button>
+              </div>
+            </div>
+          </div>
+          <div class="journal-info">
+            <div class="journal-name">${j.name}</div>
+            ${j.description ? `<div class="journal-desc">${j.description}</div>` : ''}
+            <div style="margin-top:8px">
+              <span class="journal-type-badge" style="color:${j.color};border-color:${j.color}33;background:${j.color}11">${typeLabel}</span>
+            </div>
+          </div>
+          <div class="journal-stats">
+            <div class="jstat"><div class="jstat-label">Trade</div><div class="jstat-value">${s.total}</div></div>
+            <div class="jstat"><div class="jstat-label">Win Rate</div><div class="jstat-value" style="color:var(--accent)">${wr}%</div></div>
+            <div class="jstat"><div class="jstat-label">PNL</div><div class="jstat-value" style="color:${pnlColor}">${pnlStr}</div></div>
+          </div>
+        </div>`;
+      }).join('');
+
+      grid.innerHTML = cards + `
+        <button class="journal-add-card reveal" onclick="openJournalModal()">
+          <div class="journal-add-icon">+</div>
+          <div class="journal-add-label">Buat Journal Baru</div>
+        </button>`;
+
+      // Trigger reveal
+      setTimeout(() => {
+        document.querySelectorAll('.reveal').forEach((el, i) => {
+          setTimeout(() => el.classList.add('visible'), i * 60);
+        });
+      }, 50);
+    }
+
+    function openJournal(id, e) {
+      // Jangan buka jika klik menu
+      if (e.target.closest('.journal-menu-btn') || e.target.closest('.dropdown-menu')) return;
+      window.location.href = `index.html?j=${id}`;
+    }
+
+    function toggleMenu(e, id) {
+      e.stopPropagation();
+      document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m.id !== `menu-${id}`) m.classList.remove('open');
+      });
+      document.getElementById(`menu-${id}`).classList.toggle('open');
+    }
+
+    // Tutup dropdown saat klik luar
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+    });
+
+    function openJournalModal(j = null) {
+      editingJournalId = null;
+      document.getElementById('journal-modal-title').textContent = 'Buat Journal Baru';
+      document.getElementById('j-name').value = '';
+      document.getElementById('j-desc').value = '';
+      selectType(document.querySelector('[data-type="prop"]'));
+      selectColor(document.querySelector('[data-color="#7c6ff7"]'));
+      if (j) {
+        editingJournalId = j.id;
+        document.getElementById('journal-modal-title').textContent = 'Edit Journal';
+        document.getElementById('j-name').value = j.name;
+        document.getElementById('j-desc').value = j.description || '';
+        const typeBtn = document.querySelector(`[data-type="${j.type}"]`);
+        if (typeBtn) selectType(typeBtn);
+        const colorDot = document.querySelector(`[data-color="${j.color}"]`);
+        if (colorDot) selectColor(colorDot);
+      }
+      document.getElementById('journal-modal').classList.remove('hidden');
+    }
+
+    function closeJournalModal() {
+      document.getElementById('journal-modal').classList.add('hidden');
+    }
+
+    function closeJournalModalOutside(e) {
+      if (e.target === document.getElementById('journal-modal')) closeJournalModal();
+    }
+
+    function selectType(el) {
+      document.querySelectorAll('.type-option').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedType = el.dataset.type;
+      selectedEmoji = el.dataset.emoji;
+    }
+
+    function selectColor(el) {
+      document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedColor = el.dataset.color;
+    }
+
+    async function saveJournal() {
+      const name = document.getElementById('j-name').value.trim();
+      if (!name) { document.getElementById('j-name').focus(); return; }
+
+      const btn = document.getElementById('btn-save-journal');
+      btn.disabled = true;
+      btn.querySelector('.btn-text').classList.add('hidden');
+      btn.querySelector('.btn-loading').classList.remove('hidden');
+
+      const payload = {
+        user_id: currentUser.id,
+        name,
+        type: selectedType,
+        emoji: selectedEmoji,
+        color: selectedColor,
+        description: document.getElementById('j-desc').value.trim() || null,
+      };
+
+      let error;
+      if (editingJournalId) {
+        ({ error } = await sb.from('journals').update(payload).eq('id', editingJournalId));
+      } else {
+        ({ error } = await sb.from('journals').insert(payload));
+      }
+
+      if (error) { alert('Gagal: ' + error.message); }
+      else { closeJournalModal(); loadJournals(); }
+
+      btn.disabled = false;
+      btn.querySelector('.btn-text').classList.remove('hidden');
+      btn.querySelector('.btn-loading').classList.add('hidden');
+    }
+
+    function editJournal(id, e) {
+      e.stopPropagation();
+      const j = journals.find(x => x.id === id);
+      if (j) openJournalModal(j);
+    }
+
+    async function deleteJournal(id, e) {
+      e.stopPropagation();
+      const j = journals.find(x => x.id === id);
+      if (!confirm(`Hapus journal "${j?.name}"?\n\nSemua trade di journal ini juga akan dihapus.`)) return;
+      const { error } = await sb.from('journals').delete().eq('id', id);
+      if (!error) loadJournals();
+    }
+  </script>
+</body>
+</html>
