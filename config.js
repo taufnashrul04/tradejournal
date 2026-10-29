@@ -1,0 +1,3 @@
+// Ganti dengan kredensial Supabase kamu
+const SUPABASE_URL = 'https://cferezfjatdgasiggghy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmZXJlemZqYXRkZ2FzaWdnZ2h5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNDkzMTgsImV4cCI6MjEwODgyNTMxOH0.n4eE0omYhqLuJIf3CJZ201vTfzQUxIXy66QMaOqFJzo';
