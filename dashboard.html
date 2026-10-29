@@ -319,6 +319,10 @@
           </div>
         </div>
         <div class="form-group">
+          <label>Balance Awal ($)</label>
+          <input type="number" id="j-balance" placeholder="Contoh: 10000" step="0.01" min="0">
+        </div>
+        <div class="form-group">
           <label>Deskripsi (opsional)</label>
           <input type="text" id="j-desc" placeholder="Contoh: Challenge $10k phase 1...">
         </div>
@@ -396,9 +400,25 @@
       const cards = journals.map(j => {
         const s = stats[j.id] || { total: 0, win: 0, pnl: 0 };
         const wr = s.total ? Math.round((s.win / s.total) * 100) : 0;
-        const pnlStr = s.pnl > 0 ? `+${s.pnl.toFixed(0)}` : s.pnl.toFixed(0);
+        const pnlStr = (s.pnl > 0 ? '+' : '') + s.pnl.toFixed(2);
         const pnlColor = s.pnl > 0 ? 'var(--win)' : s.pnl < 0 ? 'var(--loss)' : 'var(--text2)';
         const typeLabel = TYPE_LABELS[j.type] || j.type;
+
+        const hasBalance = j.balance_awal != null && j.balance_awal > 0;
+        const balanceNow = hasBalance ? j.balance_awal + s.pnl : null;
+        const profitPct = hasBalance ? ((s.pnl / j.balance_awal) * 100) : null;
+        const profitPctStr = profitPct != null ? (profitPct > 0 ? '+' : '') + profitPct.toFixed(1) + '%' : null;
+
+        const statsHtml = hasBalance ? `
+          <div class="jstat"><div class="jstat-label">Balance</div><div class="jstat-value" style="font-size:13px">$${balanceNow.toFixed(0)}</div></div>
+          <div class="jstat"><div class="jstat-label">Profit</div><div class="jstat-value" style="color:${pnlColor};font-size:13px">${profitPctStr}</div></div>
+          <div class="jstat"><div class="jstat-label">Win Rate</div><div class="jstat-value" style="color:var(--accent);font-size:13px">${wr}%</div></div>
+          <div class="jstat"><div class="jstat-label">Trade</div><div class="jstat-value" style="font-size:13px">${s.total}</div></div>
+        ` : `
+          <div class="jstat"><div class="jstat-label">Trade</div><div class="jstat-value">${s.total}</div></div>
+          <div class="jstat"><div class="jstat-label">Win Rate</div><div class="jstat-value" style="color:var(--accent)">${wr}%</div></div>
+          <div class="jstat"><div class="jstat-label">PNL</div><div class="jstat-value" style="color:${pnlColor}">${pnlStr}</div></div>
+        `;
 
         return `<div class="journal-card reveal" onclick="openJournal(${j.id}, event)" style="--j-color:${j.color}">
           <div class="journal-card-top">
@@ -413,16 +433,13 @@
           </div>
           <div class="journal-info">
             <div class="journal-name">${j.name}</div>
+            ${hasBalance ? `<div class="journal-desc" style="font-size:11px;margin-top:3px">Modal: <span style="color:var(--text)">$${Number(j.balance_awal).toLocaleString()}</span></div>` : ''}
             ${j.description ? `<div class="journal-desc">${j.description}</div>` : ''}
             <div style="margin-top:8px">
               <span class="journal-type-badge" style="color:${j.color};border-color:${j.color}33;background:${j.color}11">${typeLabel}</span>
             </div>
           </div>
-          <div class="journal-stats">
-            <div class="jstat"><div class="jstat-label">Trade</div><div class="jstat-value">${s.total}</div></div>
-            <div class="jstat"><div class="jstat-label">Win Rate</div><div class="jstat-value" style="color:var(--accent)">${wr}%</div></div>
-            <div class="jstat"><div class="jstat-label">PNL</div><div class="jstat-value" style="color:${pnlColor}">${pnlStr}</div></div>
-          </div>
+          <div class="journal-stats">${statsHtml}</div>
         </div>`;
       }).join('');
 
@@ -463,6 +480,7 @@
       editingJournalId = null;
       document.getElementById('journal-modal-title').textContent = 'Buat Journal Baru';
       document.getElementById('j-name').value = '';
+      document.getElementById('j-balance').value = '';
       document.getElementById('j-desc').value = '';
       selectType(document.querySelector('[data-type="prop"]'));
       selectColor(document.querySelector('[data-color="#7c6ff7"]'));
@@ -470,6 +488,7 @@
         editingJournalId = j.id;
         document.getElementById('journal-modal-title').textContent = 'Edit Journal';
         document.getElementById('j-name').value = j.name;
+        document.getElementById('j-balance').value = j.balance_awal || '';
         document.getElementById('j-desc').value = j.description || '';
         const typeBtn = document.querySelector(`[data-type="${j.type}"]`);
         if (typeBtn) selectType(typeBtn);
@@ -509,12 +528,14 @@
       btn.querySelector('.btn-text').classList.add('hidden');
       btn.querySelector('.btn-loading').classList.remove('hidden');
 
+      const balVal = document.getElementById('j-balance').value;
       const payload = {
         user_id: currentUser.id,
         name,
         type: selectedType,
         emoji: selectedEmoji,
         color: selectedColor,
+        balance_awal: balVal !== '' ? parseFloat(balVal) : null,
         description: document.getElementById('j-desc').value.trim() || null,
       };
 

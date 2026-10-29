@@ -24,9 +24,12 @@ sb.auth.getSession().then(({ data: { session } }) => {
   loadTrades();
 });
 
+let journalData = null;
+
 async function loadJournalInfo() {
   const { data, error } = await sb.from('journals').select('*').eq('id', journalId).single();
   if (error || !data) { window.location.href = 'dashboard.html'; return; }
+  journalData = data;
 
   document.title = `${data.name} - Trading Journal`;
   document.getElementById('j-title').textContent = data.name;
@@ -126,6 +129,38 @@ function renderStats(trades) {
   const pnlCard = document.getElementById('stat-pnl').parentElement;
   pnlCard.classList.toggle('pnl-pos', totalPnl > 0);
   pnlCard.classList.toggle('pnl-neg', totalPnl < 0);
+
+  // Tampilkan balance sekarang jika balance awal diset
+  if (journalData?.balance_awal) {
+    const balNow = journalData.balance_awal + totalPnl;
+    const pct = ((totalPnl / journalData.balance_awal) * 100).toFixed(1);
+    const pctStr = (totalPnl >= 0 ? '+' : '') + pct + '%';
+    document.getElementById('stat-total').closest('.stats-row')
+      .querySelectorAll('.stat-card')[0]
+      .querySelector('.stat-label').textContent = 'Balance Awal';
+    document.getElementById('stat-total').textContent = '$' + Number(journalData.balance_awal).toLocaleString();
+
+    // Ganti label PNL card jadi "Balance Skrg"
+    const pnlLabel = pnlCard.querySelector('.stat-label');
+    pnlLabel.textContent = 'Balance Skrg';
+    document.getElementById('stat-pnl').textContent = '$' + balNow.toFixed(0);
+
+    // Tampilkan profit% di winrate card bila tidak ada filter
+    const wrLabel = document.getElementById('stat-winrate').parentElement.querySelector('.stat-label');
+    wrLabel.textContent = 'Profit';
+    document.getElementById('stat-winrate').textContent = pctStr;
+    document.getElementById('stat-winrate').style.color = totalPnl >= 0 ? 'var(--win)' : 'var(--loss)';
+
+    // Ganti label Win card jadi "Trade"
+    document.getElementById('stat-win').parentElement.querySelector('.stat-label').textContent = 'Trade';
+    document.getElementById('stat-win').textContent = trades.length;
+    document.getElementById('stat-win').style.color = 'var(--text)';
+
+    // Ganti label Loss card jadi "Win Rate"
+    document.getElementById('stat-loss').parentElement.querySelector('.stat-label').textContent = 'Win Rate';
+    document.getElementById('stat-loss').textContent = winrate + '%';
+    document.getElementById('stat-loss').style.color = 'var(--accent)';
+  }
 }
 
 // Modal trade
